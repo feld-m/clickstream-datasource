@@ -1,29 +1,60 @@
 # Clickstream Data Source
 
-Adobe's Analysis Workspaces are great to generated recurring reports and occasionally diving deeper into the collected
+Adobe's Analysis Workspaces are great to generate recurring reports and occasionally diving deeper into the collected
 Web-Analytics data. However, there are situations where you'll hit the limits of it and working on raw data is
-required (e.g. Customer Journey calculation, Machine Learning, etc.). Luckily Adobe provides the collected raw data in
-form
-of [Data Feeds](https://experienceleague.adobe.com/docs/analytics/export/analytics-data-feed/data-feed-overview.html?lang=en)
-.
+required (e.g. Customer Journey calculation, Machine Learning, etc.). 
+Luckily Adobe provides the collected raw data in form of [Data Feeds](https://experienceleague.adobe.com/docs/analytics/export/analytics-data-feed/data-feed-overview.html?lang=en).
 
 These feeds can become quite big easily, which may result in additional challenges when trying to process them.
 
-One possibility to tackle the amount of data is to utilize distributed processing such
-as [Apache Spark](https://spark.apache.org/).
+One possibility to tackle the amount of data is to utilize distributed processing such as [Apache Spark](https://spark.apache.org/).
 
-Due to the way how the raw data is delivered (multi file delivery, separate lookups) getting to the point having
-everything set up and finally work with the data, can take some significant amount of time.
+Despite the plain amount the way how the raw data is delivered (multi file delivery, separate lookups) generates 
+significant overhead as well. 
 
-The goal of this project is to speed up the initial process by providing a wrapper around Sparks reading CSV
-capabilities specificall tailored for Adobe Data Feeds.
+A typical single day delivery looks like:
 
-In case you don't have a Data Feed at
-hand, [Randy Zwitch](https://randyzwitch.com/adobe-analytics-clickstream-raw-data-feed/) was so nice providing an
-example Feed. You can buy him a coffee [here](https://github.com/sponsors/randyzwitch).
+    .
+    ├── 01-zwitchdev_2015-07-13.tsv.gz              # Data File containing the raw data
+    ├── zwitchdev_2015-07-13-lookup_data.tar.gz     # All lookups wrapped in a single compressed tar
+    └── zwitchdev_2015-07-13.txt                    # The manifest carrying meta data
+
+In case you don't have a Data Feed at hand, [Randy Zwitch](https://randyzwitch.com/adobe-analytics-clickstream-raw-data-feed/) was so nice providing an example Feed. 
+You can buy him a coffee [here!](https://github.com/sponsors/randyzwitch).
+
+An example Manifest downloaded from the link above looks like this:
+```text
+Datafeed-Manifest-Version: 1.0
+Lookup-Files: 1
+Data-Files: 1
+Total-Records: 592
+
+Lookup-File: zwitchdev_2015-07-13-lookup_data.tar.gz
+MD5-Digest: 5fc56e6872b75870d9be809fdc97459f
+File-Size: 3129118
+
+Data-File: 01-zwitchdev_2015-07-13.tsv.gz
+MD5-Digest: 994c3109e0ddbd7c66c360426eaf0cd1
+File-Size: 75830
+Record-Count: 592
+```
+Usually the Manifest is written at last by Adobe, therefore indicating that the delivery is completed.
+However, the delivery itself does not ensure that all Data Files (the example contains only one, but there can be a lot 
+of them depending on the traffic your site generates) are delivered without any error.
+
+Having the Manifest allows us to extract the files that should be delivered and do some checks (does the number of
+delivered files match the expected one, ensure contents integrity, ...).
+
+Integrating this into an ETL workflow can slow down the development speed, especially when it's the first time working
+with Data Feeds.
+
+The goal of this project is to speed up the initial process by providing a thin wrapper around Sparks reading CSV
+capabilities specifically tailored for Adobe Data Feeds, allowing you to read (and validate) Data Feeds in a single line 
+of code.
 
 **Note:** This repository only supports reading Data Feeds from the local filesystem. For other filesystem get in contact
-with us or fork this repository.
+with [us](dp.team@feld-m.de) or fork this repository. In case you want to use the library in one of your commercial 
+projects and GPL v3 does not fit, drop us a note.
 
 ## Features
 
@@ -105,7 +136,7 @@ Mandatory options are:
 - dir: The path where the Data Feed is located
 - feedname: The name of the Data Feed (usually the name of the Report Suite)
 
-Applying only these options all available Data Feeds stored in the directory denoted by `path` will be read.
+Applying only these options all available Data Feeds stored in the directory denoted by `dir` will be read.
 
 In case you want to load a specific lookup simply pass the name of the lookup as argument to the `load` function such
 as `.load("event.tsv")`. It will return a Dataframe having two columns namely "lookup_key" and "lookup_value".
