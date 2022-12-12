@@ -67,8 +67,8 @@ public class Test {
         // Read a single Data Feed
         Dataset<Row> df = spark.read()
                 .format("clickstream") // Tell spark to use the custom data source
-                .option("date", "2018-07-31")
-                .option("feedname", "my.rs.id")
+                .option("date", "2015-07-13")
+                .option("feedname", "zwitchdev")
                 .options("dir", "/my/dir/")
                 // loads the actual clickstream. To load a specific lookup pass the lookupname as argument
                 // e.g. .load("events.tsv")
@@ -94,7 +94,7 @@ df.show(5)
 ### R
 
 ```R
-df <- read.df(dir = '/opt/data/clickstream/zwitchdev', source = 'clickstream', date = '2015-07-13', feedname = 'zwitchdev')
+df <- read.df(dir = '/my/dir/', source = 'clickstream', date = '2015-07-13', feedname = 'zwitchdev')
 head(df)
 ```
 
