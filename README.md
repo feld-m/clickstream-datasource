@@ -53,7 +53,7 @@ capabilities specifically tailored for Adobe Data Feeds, allowing you to read (a
 of code.
 
 **Note:** This repository only supports reading Data Feeds from the local filesystem. For other filesystem get in contact
-with [us](dp.team@feld-m.de) or fork this repository. In case you want to use the library in one of your commercial 
+with [us](mailto:dp.team@feld-m.de) or fork this repository. In case you want to use the library in one of your commercial 
 projects and GPL v3 does not fit, drop us a note.
 
 ## Features

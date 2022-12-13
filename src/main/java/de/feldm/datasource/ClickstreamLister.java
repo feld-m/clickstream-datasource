@@ -55,11 +55,6 @@ public class ClickstreamLister {
     private boolean validate = false;
 
     /**
-     * TODO
-     */
-    private boolean joinLookups = false;
-
-    /**
      * The date matching the manifest in case a single date delivery should be read.
      */
     private LocalDate date;
@@ -358,6 +353,16 @@ public class ClickstreamLister {
     }
 
     /**
+     * Gets the name of the lookup that should be extracted from .tar.gz.
+     * null in case the actual feeds shall be read.
+     *
+     * @return The name of the lookup or null.
+     */
+    public String getLookupname() {
+        return this.lookupname;
+    }
+
+    /**
      * Gets the most recent Manifest.
      *
      * @return The manifest with the most recent date.
@@ -365,10 +370,6 @@ public class ClickstreamLister {
     public Manifest getMostRecentManifest() {
         this.manifests.sort(Comparator.comparing(Manifest::getDate));
         return this.manifests.get(this.manifests.size() - 1);
-    }
-
-    public String getLookupname() {
-        return this.lookupname;
     }
 
 }
