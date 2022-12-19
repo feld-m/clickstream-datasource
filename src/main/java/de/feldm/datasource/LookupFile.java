@@ -110,8 +110,13 @@ public class LookupFile {
         File f = File.createTempFile(splitted[0], splitted[1]);
         f.deleteOnExit();
 
-        String content = getLookup(lookupName);
-
+        String content = null;
+        try {
+            content = getLookup(lookupName);
+        } catch (IOException e) {
+            throw new IllegalStateException("Error while getting lookup due to " + e.getMessage());
+        }
+        
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter(f));
             bw.write(content);
