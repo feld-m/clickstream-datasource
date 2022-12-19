@@ -94,17 +94,16 @@ public class LookupFile {
      * @throws IOException Something went wrong.
      */
     public List<String> getHeader() throws IOException {
-        String[] badChars = new String[]{" ", ",", ";", "\\{", "\\}", "\\(", "\\)", "\\n", "\\t", "="};
+        String regex = "[ ,;\\{\\}\\(\\)\\n\\t=]";
         List<String> sanitizedHeaders = new ArrayList<>();
         String lookupData = getLookup("column_headers.tsv");
         for (String s : lookupData.split("\t")) {
-            for (String badChar : badChars) {
-                s = s.replaceAll(badChar, "_");
-            }
+            s = s.replaceAll(regex, "_");
             sanitizedHeaders.add(s);
         }
         return sanitizedHeaders;
     }
+
 
     protected String extractLookup(final String lookupName) throws IOException {
         String[] splitted = lookupName.split("\\.");
