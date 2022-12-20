@@ -45,7 +45,10 @@ of them depending on the traffic your site generates) are delivered without any 
 Having the Manifest allows us to extract the files that should be delivered and do some checks (does the number of
 delivered files match the expected one, ensure contents integrity, ...).
 
-Integrating this into an ETL workflow can slow down the development speed, especially when it's the first time working
+Additionally, the Data-Files do not contain the header. This information is contained in a file `column_headers.tsv` within
+the lookup .tar.gz.
+
+Integrating the checks, extraction etc. into an ETL workflow can slow down the development speed, especially when it's the first time working
 with Data Feeds.
 
 The goal of this project is to speed up the initial process by providing a thin wrapper around Sparks reading CSV
@@ -100,7 +103,7 @@ public class Test {
                 .format("clickstream") // Tell spark to use the custom data source
                 .option("date", "2015-07-13")
                 .option("feedname", "zwitchdev")
-                .options("dir", "/my/dir/")
+                .option("dir", "/my/dir/")
                 // loads the actual clickstream. To load a specific lookup pass the lookupname as argument
                 // e.g. .load("events.tsv")
                 .load();
@@ -113,6 +116,8 @@ public class Test {
 ### Python
 
 ```python3
+# Assuming the SparkSession is available via spark as when starting pyspark via
+# /<SPARK_HOME>/bin/pyspark
 df = spark.read.format("clickstream") \
                 .option("date", "2015-07-13") \
                 .option("feedname", "zwitchdev") \
@@ -125,6 +130,8 @@ df.show(5)
 ### R
 
 ```R
+# Assuming the SparkSession is available as when starting sparkR via
+# /<SPARK_HOME>/bin/sparkR
 df <- read.df(dir = '/my/dir/', source = 'clickstream', date = '2015-07-13', feedname = 'zwitchdev')
 head(df)
 ```
