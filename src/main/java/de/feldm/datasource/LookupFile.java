@@ -94,30 +94,32 @@ public class LookupFile {
      * @throws IOException Something went wrong.
      */
     public List<String> getHeader() throws IOException {
-        String[] badChars = new String[]{" ", ",", ";", "\\{", "\\}", "\\(", "\\)", "\\n", "\\t", "="};
+        String regex = "[ ,;\\{\\}\\(\\)\\n\\t=]";
         List<String> sanitizedHeaders = new ArrayList<>();
         String lookupData = getLookup("column_headers.tsv");
         for (String s : lookupData.split("\t")) {
-            for (String badChar : badChars) {
-                s = s.replaceAll(badChar, "_");
-            }
+            s = s.replaceAll(regex, "_");
             sanitizedHeaders.add(s);
         }
         return sanitizedHeaders;
     }
+
 
     protected String extractLookup(final String lookupName) throws IOException {
         String[] splitted = lookupName.split("\\.");
         File f = File.createTempFile(splitted[0], splitted[1]);
         f.deleteOnExit();
 
-        String content = getLookup(lookupName);
-
+        String content = null;
         try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+            content = getLookup(lookupName);
+        } catch (IOException e) {
+            throw new IllegalStateException("Error while getting lookup due to " + e.getMessage());
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(f))) {
             bw.write(content);
             bw.flush();
-            bw.close();
         } catch (IOException e) {
             throw new IllegalStateException("Error while writing lookup file due to " + e.getMessage());
         }
@@ -132,24 +134,27 @@ public class LookupFile {
      * @throws IOException Something went wrong.
      */
     protected String getLookup(final String lookupName) throws IOException {
-        TarArchiveInputStream tarInput = new TarArchiveInputStream(new GzipCompressorInputStream(new FileInputStream(getPath())));
-        TarArchiveEntry currentEntry = tarInput.getNextTarEntry();
-        BufferedReader br;
-        StringBuilder sb = new StringBuilder();
-        while (currentEntry != null) {
-            if (currentEntry.getName().equals(lookupName)) {
-                br = new BufferedReader(new InputStreamReader(tarInput));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    sb.append(line).append("\n");
+        try (TarArchiveInputStream tarInput = new TarArchiveInputStream(
+                new GzipCompressorInputStream(new FileInputStream(getPath())))) {
+            TarArchiveEntry currentEntry = tarInput.getNextTarEntry();
+            StringBuilder sb = new StringBuilder();
+            while (currentEntry != null) {
+                if (currentEntry.getName().equals(lookupName)) {
+                    try(BufferedReader br = new BufferedReader(new InputStreamReader(tarInput))){
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line).append("\n");
+                        }
+                    }
+                    break;
                 }
-                br.close();
-                break;
+                currentEntry = tarInput.getNextTarEntry();
             }
-            currentEntry = tarInput.getNextTarEntry();
+            return sb.toString();
+        } catch (IOException e) {
+            throw new IllegalStateException("Error while getting lookup file due to " + e.getMessage());
         }
-        tarInput.close();
-        return sb.toString();
     }
+
 
 }
