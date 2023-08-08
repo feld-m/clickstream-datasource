@@ -6,10 +6,37 @@
 
     <groupId>de.feldm</groupId>
     <artifactId>clickstream-datasource</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    <scm>
+        <connection>scm:git:ggit@github.com:feld-m/clickstream-datasource.git</connection>
+        <url>scm:git:git@github.com:feld-m/clickstream-datasource.git</url>
+        <tag>HEAD</tag>
+    </scm>
+    <organization>
+        <name>FELD M GmbH</name>
+        <url>https://feld-m.de/</url>
+    </organization>
+    <name>clickstream-datasource</name>
+    <description>Apache Spark data source specifically tailored to read Adobe Analytics Data Feeds</description>
+    <inceptionYear>2023</inceptionYear>
+    <licenses>
+        <license>
+            <name>GNU General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0.en.html</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>feldm</id>
+            <name>The FELD M Team</name>
+            <url>https://feld-m.de/</url>
+            <organization>FELD M GmbH</organization>
+            <organizationUrl>https://feld-m.de/</organizationUrl>
+        </developer>
+    </developers>
     <build>
         <plugins>
             <plugin>
@@ -27,9 +54,8 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_2.12</artifactId>
-            <version>3.0.0</version>
-<!--            <scope>provided</scope>-->
+            <version>[3.0.0,)</version>
+            <scope>provided</scope>
         </dependency>
-
     </dependencies>
 </project>
