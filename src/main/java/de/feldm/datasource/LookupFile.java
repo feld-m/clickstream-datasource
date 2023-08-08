@@ -20,8 +20,13 @@ package de.feldm.datasource;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.SQLContext;
 
 import java.io.*;
+import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +56,11 @@ public class LookupFile {
     private final int size;
 
     /**
+     * SQLContext to access remote FS.
+     */
+    private final SQLContext sqlContext;
+
+    /**
      * Constructor.
      *
      * @param directory The directory the lookup file represented by this instance is located in.
@@ -58,11 +68,12 @@ public class LookupFile {
      * @param md5       The MD5 hash of the archive.
      * @param size      The size of the archive.
      */
-    public LookupFile(final String directory, final String name, final String md5, final int size) {
+    public LookupFile(final String directory, final String name, final String md5, final int size, final SQLContext sqlContext) {
         this.directory = directory;
         this.name = name;
         this.md5 = md5;
         this.size = size;
+        this.sqlContext = sqlContext;
     }
 
     public String getName() {
@@ -134,8 +145,23 @@ public class LookupFile {
      * @throws IOException Something went wrong.
      */
     protected String getLookup(final String lookupName) throws IOException {
+
+        // directory must look like schema://authority/
+        FileSystem fs = FileSystem.get(URI.create(this.directory), this.sqlContext.sparkContext().hadoopConfiguration());
+
+        String lookupPath = this.directory + this.name;
+
+        if (!fs.exists(new Path(lookupPath))) {
+            throw new IllegalStateException("File " + this.directory + this.name + " does not exist!");
+        }
+
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("lookup_", ".tar.gz");
+        fs.copyToLocalFile(false, new Path(lookupPath), new Path(tempFile.toAbsolutePath().toString()));
+
+        final String result;
+
         try (TarArchiveInputStream tarInput = new TarArchiveInputStream(
-                new GzipCompressorInputStream(new FileInputStream(getPath())))) {
+                new GzipCompressorInputStream(new FileInputStream(tempFile.toAbsolutePath().toFile())))) {
             TarArchiveEntry currentEntry = tarInput.getNextTarEntry();
             StringBuilder sb = new StringBuilder();
             while (currentEntry != null) {
@@ -150,11 +176,13 @@ public class LookupFile {
                 }
                 currentEntry = tarInput.getNextTarEntry();
             }
-            return sb.toString();
+            result = sb.toString();
         } catch (IOException e) {
             throw new IllegalStateException("Error while getting lookup file due to " + e.getMessage());
         }
-    }
 
+        Files.deleteIfExists(tempFile);
+        return result;
+    }
 
 }

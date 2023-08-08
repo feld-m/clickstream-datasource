@@ -17,12 +17,17 @@
 
 package de.feldm.datasource;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -85,14 +90,20 @@ public class ClickstreamLister {
     private StructType schema;
 
     /**
+     * SQLContext to access remote FS.
+     */
+    private SQLContext sqlContext;
+
+    /**
      * @param directory The directory.
      * @param feedname  The feedname.
      * @param options   Map containing the options passed.
      */
-    public ClickstreamLister(final String directory, final String feedname, final String lookupname, final Map<String, String> options) {
+    public ClickstreamLister(final String directory, final String feedname, final String lookupname, final Map<String, String> options, SQLContext sqlContext) {
         this.directory = directory;
         this.feedname = feedname;
         this.lookupname = lookupname;
+        this.sqlContext = sqlContext;
         // Configure lister according to optional options
         configure(options);
         // Try to read the manifest according to the provided options
@@ -212,7 +223,7 @@ public class ClickstreamLister {
      * @throws IOException
      */
     private Manifest getManifestForDate(final LocalDate date) throws IOException {
-        return new Manifest(this.directory, feedname + "_" + date.toString() + ".txt", this.validate);
+        return new Manifest(this.directory, feedname + "_" + date.toString() + ".txt", this.validate, this.sqlContext);
     }
 
     /**
@@ -238,20 +249,27 @@ public class ClickstreamLister {
     private List<Manifest> getAllAvailableManifests() throws IOException {
         List<Manifest> manifests = new ArrayList<>();
 
-        Pattern manifestPattern = Pattern.compile(this.feedname + "_\\d{4}-\\d{2}-\\d{2}\\.txt");
-        File dir = new File(directory);
-        if (!dir.exists() || !dir.isDirectory()) {
+        // directory must look like schema://authority/
+        FileSystem fs = FileSystem.get(URI.create(this.directory), this.sqlContext.sparkContext().hadoopConfiguration());
+
+        if (!fs.exists(new Path(this.directory))) {
             throw new IllegalStateException("Given directory does not exists or is no directory!");
         }
-        File[] files = dir.listFiles();
-        if (files == null) {
-            throw new IllegalStateException("Directory does not contain any file!");
-        }
-        for (File f : files) {
-            Matcher m = manifestPattern.matcher(f.getName());
+
+        RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(this.directory), false);
+        Pattern manifestPattern = Pattern.compile(this.feedname + "_\\d{4}-\\d{2}-\\d{2}\\.txt");
+
+        while (it.hasNext()) {
+            LocatedFileStatus lfs = it.next();
+            Matcher m = manifestPattern.matcher(lfs.getPath().getName());
+
             if (m.matches()) {
-                manifests.add(new Manifest(this.directory, f.getName(), this.validate));
+                manifests.add(new Manifest(this.directory, lfs.getPath().getName(), this.validate, this.sqlContext));
             }
+        }
+
+        if (manifests.isEmpty()) {
+            throw new IllegalStateException("Directory does not contain any Manifest file!");
         }
         return manifests;
     }

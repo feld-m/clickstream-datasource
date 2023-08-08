@@ -17,10 +17,15 @@
 
 package de.feldm.datasource;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.SQLContext;
+
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +84,11 @@ public class Manifest {
     long totalNumRecords;
 
     /**
+     * SQLContext to access remote FS.
+     */
+    SQLContext sqlContext;
+
+    /**
      * Constructor.
      *
      * @param directory    Directory the Manifest represented by this object is stored in.
@@ -86,12 +96,13 @@ public class Manifest {
      * @param validate     Boolean flag whether the data should be validated or not.
      * @throws IOException Something went wrong.
      */
-    public Manifest(final String directory, final String manifestName, final boolean validate) throws IOException {
+    public Manifest(final String directory, final String manifestName, final boolean validate, final SQLContext sqlContext) throws IOException {
         this.directory = directory;
         this.manifestName = manifestName;
         this.validate = validate;
         this.lookupFiles = new ArrayList<>();
         this.dataFiles = new ArrayList<>();
+        this.sqlContext = sqlContext;
         parse();
     }
 
@@ -104,8 +115,20 @@ public class Manifest {
      * @throws IOException Something went wrong.
      */
     private void parse() throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(new File(this.directory + File.separator +
-                this.manifestName)));
+
+        // directory must look like schema://authority/
+        FileSystem fs = FileSystem.get(URI.create(this.directory), this.sqlContext.sparkContext().hadoopConfiguration());
+
+        String manifestPath = this.directory + this.manifestName;
+
+        if (!fs.exists(new Path(manifestPath))) {
+            throw new IllegalStateException("File " + this.directory + this.manifestName + " does not exist!");
+        }
+
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("manifest_", ".txt");
+        fs.copyToLocalFile(false, new Path(manifestPath), new Path(tempFile.toAbsolutePath().toString()));
+
+        BufferedReader br = new BufferedReader(new FileReader(tempFile.toAbsolutePath().toFile()));
 
         // Read entire content of Manifest file
         String line;
@@ -130,7 +153,7 @@ public class Manifest {
 
         while (m.find()) {
             LookupFile lf = new LookupFile(this.directory, m.group(1), m.group(2),
-                    Integer.parseInt(m.group(3).trim()));
+                    Integer.parseInt(m.group(3).trim()), this.sqlContext);
 
             if (validate) {
                 final String md5 = Utils.md5(lf.getPath());
@@ -161,6 +184,8 @@ public class Manifest {
         if (lookupFiles.size() != numLookupFiles || dataFiles.size() != numDataFiles) {
             throw new IllegalStateException("Not all files could be extracted from Manifest file!");
         }
+
+        Files.deleteIfExists(tempFile);
     }
 
     /**

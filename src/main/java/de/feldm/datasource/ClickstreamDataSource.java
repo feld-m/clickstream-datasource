@@ -38,7 +38,7 @@ public class ClickstreamDataSource implements RelationProvider, DataSourceRegist
         cr.setSqlContext(sqlContext);
 
         // Obtain mandatory options
-        final String dir = options.get("dir");
+        final String dir = options.get("dir").endsWith("/") ? options.get("dir") : options.get("dir") + "/";
         final String feedname = options.get("feedname");
 
         // parameter of the load() call - if any...
@@ -46,7 +46,7 @@ public class ClickstreamDataSource implements RelationProvider, DataSourceRegist
         final String lookupname = options.get("path");
 
         // Create Lister and link it to relation
-        final ClickstreamLister lister = new ClickstreamLister(dir, feedname, lookupname, options);
+        final ClickstreamLister lister = new ClickstreamLister(dir, feedname, lookupname, options, sqlContext);
         cr.setClickstreamLister(lister);
         return cr;
     }
