@@ -1,3 +1,6 @@
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/de.feldm/clickstream-datasource/badge.svg)](https://maven-badges.herokuapp.com/maven-central/de.feldm/clickstream-datasource)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 # Clickstream Data Source
 
 Adobe's Analysis Workspaces are great to generate recurring reports and occasionally diving deeper into the collected
@@ -55,37 +58,43 @@ The goal of this project is to speed up the initial process by providing a thin 
 capabilities specifically tailored for Adobe Data Feeds, allowing you to read (and validate) Data Feeds in a single line 
 of code.
 
-**Note:** This repository only supports reading Data Feeds from the local filesystem. For other filesystem get in contact
-with [us](mailto:dp.team@feld-m.de) or fork this repository. In case you want to use the library in one of your commercial 
-projects and GPL v3 does not fit, drop us a note.
+In case you need support or experiencing any issues, feel free to create an [issue](https://github.com/feld-m/clickstream-datasource/issues) 
+or drop [us](mailto:dp.team@feld-m.de) a note.
 
-## Features
-
-- Reading a single Data Feed
-- Reading a set of Data Feeds
-- Reading a range of Data Feeds
-- Validation of delivery/parsing
-- Loading individual lookups
-
-All of this can be done with a single line of code!
-
-## Setup
-
-Setting up is straight forward:
-
-1. Clone the repository
-2. Run `mvn clean install` inside the cloned repository
-3. Copy resulting jar located in `target/` to your `<SPARK_HOME>/jars/` directory
-4. Read your Data Feeds
-
-## Usage
+# Quickstart
 
 The Data Source seamlessly integrates into the Spark environment. Therefore, you can make use of it in any language
-Spark has wrappers for. The following gives an overview how to use the Data Source in Java, Python and R. Only
-prerequisite is that the resulting jar has been copied to `<SPARK_HOME>/jars/`
+Spark has wrappers for.
 
-### Java
+The following gives an overview how to use the Data Source in Java, Python and R.
 
+## Python
+Add the package via the `--packages` option and provide the artifact coordinates
+```shell
+./pyspark --packages "de.feldm:clickstream-datasource:0.1.0"
+```
+Once the interpreter is ready all you have to do is:
+```python
+df = spark.read.format("clickstream") \
+                .option("date", "2015-07-13") \
+                .option("feedname", "zwitchdev") \
+                .option("dir", "file:///my/dir/") \
+                .load()
+
+df.show(5)
+```
+
+## Java
+If you want to integrate it into you project add the following dependency into your `pom.xml`
+```xml
+<dependency>
+    <groupId>de.feldm</groupId>
+    <artifactId>clickstream-datasource</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+All you have to do is: 
 ```java
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -103,7 +112,7 @@ public class Test {
                 .format("clickstream") // Tell spark to use the custom data source
                 .option("date", "2015-07-13")
                 .option("feedname", "zwitchdev")
-                .option("dir", "/my/dir/")
+                .option("dir", "file:///my/dir/")
                 // loads the actual clickstream. To load a specific lookup pass the lookupname as argument
                 // e.g. .load("events.tsv")
                 .load();
@@ -113,34 +122,43 @@ public class Test {
 }
 ```
 
-### Python
-
-```python3
-# Assuming the SparkSession is available via spark as when starting pyspark via
-# /<SPARK_HOME>/bin/pyspark
-df = spark.read.format("clickstream") \
-                .option("date", "2015-07-13") \
-                .option("feedname", "zwitchdev") \
-                .option("dir", "/my/dir/") \
-                .load()
-
-df.show(5)
+## R
+Add the package via the `--packages` option and provide the artifact coordinates
+```shell
+./sparkR --packages "de.feldm:clickstream-datasource:0.1.0"
 ```
-
-### R
+Once the interpreter is ready all you have to do is:
 
 ```R
-# Assuming the SparkSession is available as when starting sparkR via
-# /<SPARK_HOME>/bin/sparkR
-df <- read.df(dir = '/my/dir/', source = 'clickstream', date = '2015-07-13', feedname = 'zwitchdev')
+df <- read.df(dir = 'file:///my/dir/', source = 'clickstream', date = '2015-07-13', feedname = 'zwitchdev')
 head(df)
 ```
+
+## Generic
+
+Or add the library via `--packages` option when submitting jobs
+```shell
+./spark-submit --packages "de.feldm:clickstream-datasource:0.1.0" <file>
+```
+
+# Features
+- All exported columns are automatically renamed
+- Reading a single Data Feed e.g. 2023-01-01
+- Reading a set of Data Feeds e.g 2023-01-01,2023-02-01,2023-03-01
+- Reading a range of Data Feeds e.g. from 2023-01-01 to 2023-02-15
+- Validation of delivery/parsing
+  - optional checking of expected and actual MD5 sums
+  - validation if delivery options (e.g. changes in the exported columns) are in line
+- Loading individual lookups such as browser lookups
+
+All of this can be done with a single line of code!
 
 ## Options
 
 Mandatory options are:
 
 - dir: The path where the Data Feed is located
+  - the path needs to contain the scheme (e.g. file://, wasbs://, ... )
 - feedname: The name of the Data Feed (usually the name of the Report Suite)
 
 Applying only these options all available Data Feeds stored in the directory denoted by `dir` will be read.
@@ -179,3 +197,12 @@ The validation will check whether the actual MD5 sums of the files match the one
 that the number of records read from the individual files match the to the sum of the total records of the Manifest in
 scope.  
 Note: Calculating the MD5 sum is quite expensive.  
+
+## Build from source
+
+Setting up is straight forward:
+
+1. Clone the repository
+2. Run `mvn clean install` inside the cloned repository
+3. Copy resulting jar located in `target/` to your `<SPARK_HOME>/jars/` directory
+4. Read your Data Feeds
